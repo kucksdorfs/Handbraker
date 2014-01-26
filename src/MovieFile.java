@@ -58,7 +58,7 @@ public class MovieFile {
 	}
 
 	public Boolean HasSubtitles() {
-		String HandbrakeCLI = Main.GetCliLocation();
+		String HandbrakeCLI = Driver.GetCliLocation();
 
 		ProcessBuilder pb = new ProcessBuilder(HandbrakeCLI, "-i", this.input, "--scan");
 		Process p;
