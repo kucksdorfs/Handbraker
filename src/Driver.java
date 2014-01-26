@@ -203,7 +203,7 @@ public class Driver {
 	}
 
 	private static Boolean HasValidExtension(String pathToFile) {
-		String[] validExtensionsAry = validExtensions.split("|");
+		String[] validExtensionsAry = validExtensions.split("\\|");
 		for (int i = 0; i < validExtensionsAry.length; ++i) {
 			if (pathToFile.endsWith(validExtensionsAry[i])) {
 				return true;
