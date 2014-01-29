@@ -8,6 +8,7 @@ public class Driver {
 	private static String validExtensions = ".mkv|.mp4";
 	private static String outputExtension = ".mp4";
 	private static Boolean verboseOutput = false;
+	private static Integer verboseNumber = 30;
 
 	public static String GetCliLocation() {
 		return cliLocation;
@@ -29,6 +30,9 @@ public class Driver {
 					.println("\t--outputExtension {extension} \t\t - The extension for the output file. Note, HandbrakeCLI only supports mp4 and mkv. The default is .mp4");
 			System.out
 					.println("\t-v or --verbose \t\t - Write the output from HandBrakeCLI to the stdout.");
+			System.out
+					.println("\t-vn {integer} - The number of outputs to skip. The smaller the number, the more verbose the output from HandbrakeCLI. Implies the -v. Default value is "
+							+ verboseNumber.toString());
 			System.out.println("\t-h \t\t - Displays this help.");
 			return;
 		}
@@ -59,6 +63,23 @@ public class Driver {
 					return;
 				}
 				break;
+			case ("-vn"):
+				// verboseNumber
+				if (args.length >= ++i)
+					try {
+						verboseNumber = Integer.parseInt(args[i]);
+						if (verboseNumber <= 0)
+							throw new Exception(
+									"The number must be greater than 0.");
+					} catch (Exception ex) {
+						System.out
+								.println("The number provided for the -vn parameter must be greater than 0.");
+						return;
+					}
+				else {
+					System.out.println("There was no integer provided.");
+					return;
+				}
 			case ("-v"):
 			case ("--verbose"):
 				verboseOutput = true;
@@ -144,7 +165,7 @@ public class Driver {
 				if (verboseOutput) {
 					StreamGobbler outputGobbler = new StreamGobbler(
 							p.getInputStream(),
-							currentMovie.GetDestinationFullPath());
+							currentMovie.GetRelativeFileName(), verboseNumber);
 					outputGobbler.start();
 				}
 				p.waitFor();

@@ -4,35 +4,48 @@ import java.io.InputStreamReader;
 import java.io.File;
 
 public class MovieFile {
-	String input, baseInputDir, baseOutputDir, myExtension;
+	String fullInputFileName, baseInputDir, baseOutputDir, myExtension;
 	Boolean hasSubtitles = null;
 	
 	String fileName = null, destinationPath = null;
 
-	public MovieFile(String inputFile, String baseInputDir, String baseOutputDir, String outputExtension) {
-		this.input = inputFile;
+	public MovieFile(String fullInputFileName, String baseInputDir, String baseOutputDir, String outputExtension) {
+		this.fullInputFileName = fullInputFileName;
 		this.baseInputDir = baseInputDir;
 		this.baseOutputDir = baseOutputDir;
 		this.myExtension = outputExtension;
 	}
 
-	public String GetFileName() {
+	public String GetFileNameWithoutPath() {
 		if (this.fileName != null)
 			return this.fileName;
-		File file = new File(this.input);
+		File file = new File(this.fullInputFileName);
 		this.fileName = file.getName();
 		file = null;
 		return this.fileName;
+	}
+	
+	public String GetRelativeFileName() throws Exception {
+		if (!this.fullInputFileName.startsWith(this.baseInputDir))
+			throw new Exception("Base directory is not part of the full directory.");
+		
+		String retValue = "";
+		retValue = this.fullInputFileName.substring(this.baseInputDir.length());
+		
+		if (retValue.startsWith(File.separator))
+			retValue = retValue.substring(1);
+
+		return retValue;
 	}
 
 	public String GetDestinationFullPath() throws Exception {
 		if (this.destinationPath != null)
 			return this.destinationPath;
-		if (baseInputDir.startsWith(input)) {
+		if (baseInputDir.startsWith(fullInputFileName)) {
 			throw new Exception("Base directory is not part of the full directory.");
 		}
 		
-		String endPath = input.substring(baseInputDir.length());
+		String endPath = fullInputFileName.substring(baseInputDir.length());
 		String fullPath = baseOutputDir + (!baseOutputDir.endsWith(File.separator) || !endPath.startsWith(File.separator) ? "" : File.separator) + endPath;
 		if (fullPath.endsWith(this.myExtension)) {
 			this.destinationPath = fullPath;
@@ -54,13 +67,13 @@ public class MovieFile {
 	}
 
 	public String GetSourcePath() {
-		return this.input;
+		return this.fullInputFileName;
 	}
 
 	public Boolean HasSubtitles() {
 		String HandbrakeCLI = Driver.GetCliLocation();
 
-		ProcessBuilder pb = new ProcessBuilder(HandbrakeCLI, "-i", this.input, "--scan");
+		ProcessBuilder pb = new ProcessBuilder(HandbrakeCLI, "-i", this.fullInputFileName, "--scan");
 		Process p;
 		try {
 			p = pb.start();
