@@ -6,7 +6,7 @@ import java.io.InputStreamReader;
 public class Driver {
 	private static String cliLocation = "/usr/bin/HandBrakeCLI";
 	private static String validExtensions = ".mkv|.mp4";
-	private static String outputExtension = ".mp4";
+	private static String outputExtension = "mp4";
 	private static Boolean verboseOutput = false;
 	private static Integer verboseNumber = 30;
 
@@ -27,7 +27,7 @@ public class Driver {
 			System.out
 					.println("\t--extensions {extension} \t\t - The bar delimited \"|\" list of extensions to find. The default is .mkv|.mp4");
 			System.out
-					.println("\t--outputExtension {extension} \t\t - The extension for the output file. Note, HandbrakeCLI only supports mp4 and mkv. The default is .mp4");
+					.println("\t--outputExtension {extension} \t\t - The extension for the output file. Note, HandbrakeCLI only supports mp4 and mkv. The default is mp4");
 			System.out
 					.println("\t-v or --verbose \t\t - Write the output from HandBrakeCLI to the stdout.");
 			System.out
@@ -56,8 +56,15 @@ public class Driver {
 				}
 				break;
 			case ("--outputExtension"):
-				if (args.length >= ++i)
-					outputExtension = args[i];
+				if (args.length >= ++i) {
+					if (args[i].equals("mp4") || args[i].equals("mkv")) {
+						outputExtension = args[i];
+					}
+					else {
+						System.out.println("The extension " + args[i] + " is not a valid extension.");
+						return;
+					}
+				}
 				else {
 					System.out.println("There was no extension provided.");
 					return;
@@ -155,11 +162,18 @@ public class Driver {
 				ProcessBuilder pb = new ProcessBuilder();
 				if (currentMovie.HasSubtitles()) {
 					pb.command(cliLocation, "-i", currentMovie.GetSourcePath(),
-							"-o", currentMovie.GetDestinationFullPath(), "-m",
-							"-s", "1", "--subtitle-default", "1");
+							"-o", currentMovie.GetDestinationFullPath(), "-e", "x264",
+							"-q", "20.0", "-a", "1", "-E", "faac", "-B", "160", "-6", "dpl2", "-R", "Auto",
+							"-D", "0.0", "--audio-copy-mask", "aac,ac3,dtshd,dts,mp3", "--audio-fallback", "ffac3",
+							"-f", outputExtension, "--loose-anamorphic", "--modulus", "2", "-m", "--x264-preset", "veryfast",
+							"--h264-profile", "main", "--h264-level", "4.0", "-s", "1", "--subtitle-default", "1");
 				} else {
 					pb.command(cliLocation, "-i", currentMovie.GetSourcePath(),
-							"-o", currentMovie.GetDestinationFullPath(), "-m");
+							"-o", currentMovie.GetDestinationFullPath(), "-e", "x264",
+							"-q", "20.0", "-a", "1", "-E", "faac", "-B", "160", "-6", "dpl2", "-R", "Auto",
+							"-D", "0.0", "--audio-copy-mask", "aac,ac3,dtshd,dts,mp3", "--audio-fallback", "ffac3",
+							"-f", outputExtension, "--loose-anamorphic", "--modulus", "2", "-m", "--x264-present", "veryfast",
+							"--h264-profile", "main", "--h264-level", "4.0");
 				}
 				Process p = pb.start();
 				if (verboseOutput) {
