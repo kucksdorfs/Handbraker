@@ -9,6 +9,12 @@ public class Driver {
 	private static String outputExtension = "mp4";
 	private static Boolean verboseOutput = false;
 	private static Integer verboseNumber = 30;
+	private static Boolean deleteOriginal = false;
+	private static Integer conversionTolerance = 1; // second
+	
+	public static int GetConverstionTolerance() {
+		return conversionTolerance;
+	}
 
 	public static String GetCliLocation() {
 		return cliLocation;
@@ -33,6 +39,8 @@ public class Driver {
 			System.out
 					.println("\t-vn {integer} - The number of outputs to skip. The smaller the number, the more verbose the output from HandbrakeCLI. Implies the -v. Default value is "
 							+ verboseNumber.toString());
+			System.out.println("\t-d - Flag to delete the original files.");
+			System.out.println("\t-t {integer} - The tolerance in seconds used for determining if a conversion was successful.");
 			System.out.println("\t-h \t\t - Displays this help.");
 			return;
 		}
@@ -59,13 +67,12 @@ public class Driver {
 				if (args.length >= ++i) {
 					if (args[i].equals("mp4") || args[i].equals("mkv")) {
 						outputExtension = args[i];
-					}
-					else {
-						System.out.println("The extension " + args[i] + " is not a valid extension.");
+					} else {
+						System.out.println("The extension " + args[i]
+								+ " is not a valid extension.");
 						return;
 					}
-				}
-				else {
+				} else {
 					System.out.println("There was no extension provided.");
 					return;
 				}
@@ -90,6 +97,26 @@ public class Driver {
 			case ("-v"):
 			case ("--verbose"):
 				verboseOutput = true;
+				break;
+			case ("-d"):
+				deleteOriginal = true;
+				break;
+			case ("-t"):
+				if (args.length >= ++i)
+					try {
+						conversionTolerance = Integer.parseInt(args[i]);
+						if (conversionTolerance <= 0)
+							throw new Exception(
+									"The number must be greater than 0.");
+					} catch (Exception ex) {
+						System.out
+								.println("The number provided for the -t parameter must be greater than 0.");
+						return;
+					}
+				else {
+					System.out.println("There was no integer provided.");
+					return;
+				}
 				break;
 			default:
 				System.out.println("There was an invalid argument: " + args[i]);
@@ -140,10 +167,11 @@ public class Driver {
 
 		Node myMovieList = RecursiveFileSearch(inputDir,
 				inputDir.getAbsolutePath(), outputDir.getAbsolutePath());
+		MovieFile.Tolerance = conversionTolerance;
 
 		while (myMovieList != null) {
 			MovieFile currentMovie = myMovieList.GetMyMovieFile();
-
+			String previousMovie = "";
 			try {
 				File parentDir = new File(
 						currentMovie.GetDestinationDirectoryPath());
@@ -162,37 +190,79 @@ public class Driver {
 				ProcessBuilder pb = new ProcessBuilder();
 				if (currentMovie.HasSubtitles()) {
 					pb.command(cliLocation, "-i", currentMovie.GetSourcePath(),
-							"-o", currentMovie.GetDestinationFullPath(), "-e", "x264",
-							"-q", "20.0", "-a", "1", "-E", "faac", "-B", "160", "-6", "dpl2", "-R", "Auto",
-							"-D", "0.0", "--audio-copy-mask", "aac,ac3,dtshd,dts,mp3", "--audio-fallback", "ffac3",
-							"-f", outputExtension, "--loose-anamorphic", "--modulus", "2", "-m", "--x264-preset", "veryfast",
-							"--h264-profile", "main", "--h264-level", "4.0", "-s", "1", "--subtitle-default", "1");
+							"-o", currentMovie.GetDestinationFullPath(), "-e",
+							"x264", "-q", "20.0", "-a", "1", "-E", "faac",
+							"-B", "160", "-6", "dpl2", "-R", "Auto", "-D",
+							"0.0", "--audio-copy-mask",
+							"aac,ac3,dtshd,dts,mp3", "--audio-fallback",
+							"ffac3", "-f", outputExtension,
+							"--loose-anamorphic", "--modulus", "2", "-m",
+							"--x264-preset", "veryfast", "--h264-profile",
+							"main", "--h264-level", "4.0", "-s", "1",
+							"--subtitle-default", "1");
 				} else {
 					pb.command(cliLocation, "-i", currentMovie.GetSourcePath(),
-							"-o", currentMovie.GetDestinationFullPath(), "-e", "x264",
-							"-q", "20.0", "-a", "1", "-E", "faac", "-B", "160", "-6", "dpl2", "-R", "Auto",
-							"-D", "0.0", "--audio-copy-mask", "aac,ac3,dtshd,dts,mp3", "--audio-fallback", "ffac3",
-							"-f", outputExtension, "--loose-anamorphic", "--modulus", "2", "-m", "--x264-present", "veryfast",
-							"--h264-profile", "main", "--h264-level", "4.0");
+							"-o", currentMovie.GetDestinationFullPath(), "-e",
+							"x264", "-q", "20.0", "-a", "1", "-E", "faac",
+							"-B", "160", "-6", "dpl2", "-R", "Auto", "-D",
+							"0.0", "--audio-copy-mask",
+							"aac,ac3,dtshd,dts,mp3", "--audio-fallback",
+							"ffac3", "-f", outputExtension,
+							"--loose-anamorphic", "--modulus", "2", "-m",
+							"--x264-present", "veryfast", "--h264-profile",
+							"main", "--h264-level", "4.0");
 				}
 				Process p = pb.start();
 				if (verboseOutput) {
 					StreamGobbler outputGobbler = new StreamGobbler(
 							p.getInputStream(),
 							currentMovie.GetRelativeFileName(), verboseNumber);
+					StreamGobbler errorGobbler = new StreamGobbler (
+							p.getErrorStream(),
+							"Error", 1);
 					outputGobbler.start();
+					errorGobbler.start();
 				}
 				p.waitFor();
-				System.out.println("Finished transcoding "
-						+ currentMovie.GetDestinationFullPath());
-				System.out.println("There are " + --Node.NumInList
-						+ " left to be transcoded.");
 			} catch (Exception ex) {
 				System.out.println("There was a problem running HandbrakeCLI: "
 						+ ex.getMessage());
 			}
 
-			myMovieList = myMovieList.next;
+			if (currentMovie.EncodedSuccessfully()) {
+				if (deleteOriginal) {
+					File inputFile = new File(currentMovie.GetSourcePath());
+					File parentFolder = inputFile.getParentFile();
+					inputFile.delete();
+					if (parentFolder.listFiles().length == 0) {
+						parentFolder.delete();
+					}
+				}
+
+				try {
+					System.out.println("Finished transcoding "
+							+ currentMovie.GetDestinationFullPath());
+					System.out.println("There are " + --Node.NumInList
+							+ " left to be transcoded.");
+				} catch (Exception ex) {
+					System.out.println(ex.getMessage());
+				}
+				myMovieList = myMovieList.next;
+			} else {
+				File destFile = null;
+				try {
+					destFile = new File(currentMovie.GetDestinationFullPath());
+				} catch (Exception ex) {
+					System.out.println(ex.getMessage());
+				}
+				if (!previousMovie.equals(currentMovie.GetSourcePath())) {
+					System.err.println("There was an error encoding the file " + previousMovie);
+				}
+				else {
+					destFile.delete();
+				}
+			}
+			previousMovie = currentMovie.GetSourcePath();
 		}
 
 		System.out.println("Exiting program.");
