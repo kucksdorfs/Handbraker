@@ -256,6 +256,7 @@ public class Driver {
 					System.out.println(ex.getMessage());
 				}
 				if (!previousMovie.equals(currentMovie.GetSourcePath())) {
+					myMovieList = myMovieList.next;
 					System.err.println("There was an error encoding the file " + previousMovie);
 				}
 				else {

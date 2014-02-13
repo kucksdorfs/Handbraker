@@ -119,7 +119,7 @@ public class MovieFile {
 		fullPath = fullPath.substring(0, indexOfExtension);
 
 		this.destinationPath = fullPath
-				+ (!fullPath.endsWith(".") || !myExtension.startsWith(".") ? ""
+				+ (fullPath.endsWith(".") || myExtension.startsWith(".") ? ""
 						: ".") + myExtension;
 		return this.destinationPath;
 	}
